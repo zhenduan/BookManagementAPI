@@ -96,14 +96,13 @@ namespace BookManagementAPI.Controllers
         }
 
         [HttpDelete("{id}")]
-        public IActionResult DeleteBook(int id)
+        public async Task<IActionResult> DeleteBook(int id)
         {
-            var book = _books.FirstOrDefault(book => book.Id == id);
-            if (book == null)
+            var bookDelete = await _bookRepository.DeleteBook(id);
+            if (bookDelete == null)
             {
                 return NotFound();
             }
-            _books.Remove(book);
             return Ok("Book deleted");
         }
 

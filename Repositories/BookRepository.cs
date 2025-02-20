@@ -25,9 +25,17 @@ namespace BookManagementAPI.Repositories
             return book;
         }
 
-        public Task<Book?> DeleteBook(int id)
+        public async Task<Book?> DeleteBook(int id)
         {
-            throw new NotImplementedException();
+            var bookToDelete = await _context.Books.FindAsync(id);
+            if (bookToDelete == null)
+            {
+                return null;
+            }
+
+            _context.Books.Remove(bookToDelete);
+            await _context.SaveChangesAsync();
+            return bookToDelete;
         }
 
         public async Task<Book?> GetBookById(int id)
