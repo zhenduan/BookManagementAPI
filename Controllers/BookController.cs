@@ -21,30 +21,6 @@ namespace BookManagementAPI.Controllers
             _bookRepository = bookRepository;
         }
 
-        private static List<Book> _books = new(){
-            new Book{
-                Id = 1,
-                Title = "The Great Gatsby",
-                Author = "F. Scott Fitzgerald",
-                ISBN = "9780743273565",
-                PublicationDate = new DateTime(1925, 4, 10)
-            },
-            new Book{
-                Id = 2,
-                Title = "To Kill a Mockingbird",
-                Author = "Harper Lee",
-                ISBN = "9780061120084",
-                PublicationDate = new DateTime(1960, 7, 11)
-            },
-            new Book{
-                Id = 3,
-                Title = "1984",
-                Author = "George Orwell",
-                ISBN = "9780451524935",
-                PublicationDate = new DateTime(1949, 6, 8)
-            }
-        };
-
 
         [HttpGet]
         public async Task<IActionResult> GetBooks()
