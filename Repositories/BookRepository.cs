@@ -27,9 +27,9 @@ namespace BookManagementAPI.Repositories
             throw new NotImplementedException();
         }
 
-        public Task<Book?> GetBookById(int id)
+        public async Task<Book?> GetBookById(int id)
         {
-            throw new NotImplementedException();
+            return await _context.Books.FindAsync(id);
         }
 
         public async Task<List<Book>> GetBooks()

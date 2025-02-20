@@ -47,17 +47,17 @@ namespace BookManagementAPI.Controllers
 
 
         [HttpGet]
-        public IActionResult GetBooks()
+        public async Task<IActionResult> GetBooks()
         {
-            // var books = _books.Select(book => book.ToBookDto());
-            var books = _bookRepository.GetBooks().Result.Select(book => book.ToBookDto());
-            return Ok(books);
+            var books = await _bookRepository.GetBooks();
+            var bookDtos = books.Select(book => book.ToBookDto());
+            return Ok(bookDtos);
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetBookById(int id)
+        public async Task<IActionResult> GetBookById(int id)
         {
-            var book = _books.FirstOrDefault(book => book.Id == id);
+            var book = await _bookRepository.GetBookById(id);
             if (book == null)
             {
                 return NotFound();
