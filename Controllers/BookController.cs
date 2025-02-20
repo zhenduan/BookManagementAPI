@@ -68,36 +68,30 @@ namespace BookManagementAPI.Controllers
         }
 
         [HttpPost]
-        public IActionResult CreateBook([FromBody] CreateBookRequestDto createBookRequestDto)
+        public async Task<IActionResult> CreateBook([FromBody] CreateBookRequestDto createBookRequestDto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest();
             }
             var book = createBookRequestDto.ToBookFromCreateBookRequestDto();
-            book.Id = _books.Max(book => book.Id) + 1;
-            _books.Add(book);
+            await _bookRepository.AddBook(book);
             return CreatedAtAction(nameof(GetBookById), new { id = book.Id }, book.ToBookDto());
         }
 
         [HttpPut("{id}")]
-        public IActionResult UpdateBook(int id, [FromBody] UpdateBookRequestDto updateBookRequestDto)
+        public async Task<IActionResult> UpdateBook(int id, [FromBody] UpdateBookRequestDto updateBookRequestDto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest();
             }
-            var book = _books.FirstOrDefault(book => book.Id == id);
-            if (book == null)
+            var bookUpdate = await _bookRepository.UpdateBook(id, updateBookRequestDto);
+            if (bookUpdate == null)
             {
                 return NotFound();
             }
-            book.Title = updateBookRequestDto.Title;
-            book.Author = updateBookRequestDto.Author;
-            book.ISBN = updateBookRequestDto.ISBN;
-            book.PublicationDate = updateBookRequestDto.PublicationDate;
-
-            return Ok(book.ToBookDto());
+            return Ok(bookUpdate.ToBookDto());
 
         }
 

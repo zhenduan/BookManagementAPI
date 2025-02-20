@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BookManagementAPI.Data;
+using BookManagementAPI.Dtos.Book;
 using BookManagementAPI.Interfaces;
 using BookManagementAPI.Models;
 using Microsoft.EntityFrameworkCore;
@@ -17,9 +18,11 @@ namespace BookManagementAPI.Repositories
         {
             _context = context;
         }
-        public Task<Book> AddBook(Book book)
+        public async Task<Book> AddBook(Book book)
         {
-            throw new NotImplementedException();
+            _context.Books.Add(book);
+            await _context.SaveChangesAsync();
+            return book;
         }
 
         public Task<Book?> DeleteBook(int id)
@@ -37,9 +40,21 @@ namespace BookManagementAPI.Repositories
             return await _context.Books.ToListAsync();
         }
 
-        public Task<Book?> UpdateBook(int id, Book book)
+        public async Task<Book?> UpdateBook(int id, UpdateBookRequestDto book)
         {
-            throw new NotImplementedException();
+            var bookToUpdate = await _context.Books.FindAsync(id);
+            if (bookToUpdate == null)
+            {
+                return null;
+            }
+
+            bookToUpdate.Title = book.Title;
+            bookToUpdate.Author = book.Author;
+            bookToUpdate.ISBN = book.ISBN;
+            bookToUpdate.PublicationDate = book.PublicationDate;
+
+            await _context.SaveChangesAsync();
+            return bookToUpdate;
         }
     }
 }
