@@ -1,4 +1,6 @@
 using BookManagementAPI.Data;
+using BookManagementAPI.Interfaces;
+using BookManagementAPI.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
@@ -26,6 +28,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
+
+// register the repository
+builder.Services.AddScoped<IBookRepository, BookRepository>();
 
 var app = builder.Build();
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BookManagementAPI.Dtos.Book;
+using BookManagementAPI.Interfaces;
 using BookManagementAPI.Mappers;
 using BookManagementAPI.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +14,13 @@ namespace BookManagementAPI.Controllers
     [Route("api/books")]
     public class BookController : ControllerBase
     {
+        private IBookRepository _bookRepository;
+
+        public BookController(IBookRepository bookRepository)
+        {
+            _bookRepository = bookRepository;
+        }
+
         private static List<Book> _books = new(){
             new Book{
                 Id = 1,
@@ -41,7 +49,8 @@ namespace BookManagementAPI.Controllers
         [HttpGet]
         public IActionResult GetBooks()
         {
-            var books = _books.Select(book => book.ToBookDto());
+            // var books = _books.Select(book => book.ToBookDto());
+            var books = _bookRepository.GetBooks().Result.Select(book => book.ToBookDto());
             return Ok(books);
         }
 
