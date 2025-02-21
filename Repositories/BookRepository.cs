@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BookManagementAPI.Data;
 using BookManagementAPI.Dtos.Book;
+using BookManagementAPI.Helpers;
 using BookManagementAPI.Interfaces;
 using BookManagementAPI.Models;
 using Microsoft.EntityFrameworkCore;
@@ -43,9 +44,29 @@ namespace BookManagementAPI.Repositories
             return await _context.Books.FindAsync(id);
         }
 
-        public async Task<List<Book>> GetBooks()
+        public async Task<List<Book>> GetBooks(QueryObject queryObject)
         {
-            return await _context.Books.ToListAsync();
+            var books = _context.Books.AsQueryable();
+            if (!string.IsNullOrWhiteSpace(queryObject.SearchQuery))
+            {
+                books = books.Where(b => b.Title.Contains(queryObject.SearchQuery) ||
+                                         b.Author.Contains(queryObject.SearchQuery) ||
+                                         b.ISBN.Contains(queryObject.SearchQuery));
+            }
+
+            if (!string.IsNullOrWhiteSpace(queryObject.SortBy))
+            {
+                bool isDescending = queryObject.SortOrder?.ToLower() == "desc";
+                books = queryObject.SortBy switch
+                {
+                    "title" => isDescending ? books.OrderByDescending(b => b.Title) : books.OrderBy(b => b.Title),
+                    "author" => isDescending ? books.OrderByDescending(b => b.Author) : books.OrderBy(b => b.Author),
+                    _ => books
+                };
+            }
+            books = books.Skip((queryObject.PageNumber - 1) * queryObject.PageSize)
+                         .Take(queryObject.PageSize);
+            return await books.ToListAsync();
         }
 
         public async Task<Book?> UpdateBook(int id, UpdateBookRequestDto book)

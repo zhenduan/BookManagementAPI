@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BookManagementAPI.Dtos.Book;
+using BookManagementAPI.Helpers;
 using BookManagementAPI.Interfaces;
 using BookManagementAPI.Mappers;
 using BookManagementAPI.Models;
@@ -23,9 +24,9 @@ namespace BookManagementAPI.Controllers
 
 
         [HttpGet]
-        public async Task<IActionResult> GetBooks()
+        public async Task<IActionResult> GetBooks([FromQuery] QueryObject queryObject)
         {
-            var books = await _bookRepository.GetBooks();
+            var books = await _bookRepository.GetBooks(queryObject);
             var bookDtos = books.Select(book => book.ToBookDto());
             return Ok(bookDtos);
         }
