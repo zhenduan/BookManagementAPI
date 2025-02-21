@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using BookManagementAPI.Data;
 using BookManagementAPI.Infrastructure;
 using BookManagementAPI.Interfaces;
@@ -6,8 +7,29 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using NLog.Web;
 using Serilog;
+using Serilog.Sinks.MSSqlServer;
 
 var builder = WebApplication.CreateBuilder(args);
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// Define MSSQL Server sink options
+var sinkOptions = new MSSqlServerSinkOptions
+{
+    TableName = "Logs",
+    AutoCreateSqlTable = true, // Automatically creates the Logs table if not exists
+    BatchPostingLimit = 50, // Number of logs before batch insert
+    SchemaName = "dbo"
+};
+
+// Define column options
+var columnOptions = new ColumnOptions
+{
+    AdditionalColumns = new Collection<SqlColumn>
+    {
+        new SqlColumn("UserName", System.Data.SqlDbType.NVarChar, true, 100),
+        new SqlColumn("RequestPath", System.Data.SqlDbType.NVarChar, true, 200)
+    }
+};
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -29,7 +51,7 @@ builder.Services.AddSwaggerGen(options =>
 // register the database context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+    options.UseSqlServer(connectionString);
 });
 
 // register the repository
@@ -42,7 +64,14 @@ builder.Services.AddProblemDetails();
 // config Serilog
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
-    .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day) // save logs to a file
+    .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 7) // save logs to a file
+   .WriteTo.MSSqlServer(
+        connectionString: connectionString,
+        sinkOptions: sinkOptions,
+        columnOptions: columnOptions,
+        restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Warning
+
+    )
     .CreateLogger();
 
 builder.Host.UseSerilog(); // use Serilog for logging
