@@ -76,9 +76,6 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog(); // use Serilog for logging
 
-
-
-
 var app = builder.Build();
 
 // Initialize Database (Apply migrations & seed data)
@@ -110,10 +107,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-
-
-
 
 app.UseExceptionHandler();
 
