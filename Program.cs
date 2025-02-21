@@ -4,6 +4,8 @@ using BookManagementAPI.Interfaces;
 using BookManagementAPI.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using NLog.Web;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,6 +38,19 @@ builder.Services.AddScoped<IBookRepository, BookRepository>();
 // register the exception handler
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
+
+// config Serilog
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day) // save logs to a file
+    .CreateLogger();
+
+builder.Host.UseSerilog(); // use Serilog for logging
+
+// config NLog
+builder.Logging.ClearProviders();
+builder.Host.UseNLog();
+
 
 var app = builder.Build();
 
