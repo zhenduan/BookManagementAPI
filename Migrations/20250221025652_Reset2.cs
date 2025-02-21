@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace BookManagementAPI.Migrations
 {
     /// <inheritdoc />
-    public partial class DBInitSeedData : Migration
+    public partial class Reset2 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

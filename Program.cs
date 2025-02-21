@@ -7,21 +7,22 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using NLog.Web;
 using Serilog;
+using Serilog.Events;
 using Serilog.Sinks.MSSqlServer;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-// Define MSSQL Server sink options
+// ✅ Define MSSQL Server sink options
 var sinkOptions = new MSSqlServerSinkOptions
 {
     TableName = "Logs",
-    AutoCreateSqlTable = true, // Automatically creates the Logs table if not exists
-    BatchPostingLimit = 50, // Number of logs before batch insert
+    AutoCreateSqlTable = true, // ✅ Ensure Logs table is created manually
+    BatchPostingLimit = 50,
     SchemaName = "dbo"
 };
 
-// Define column options
+// ✅ Define column options
 var columnOptions = new ColumnOptions
 {
     AdditionalColumns = new Collection<SqlColumn>
@@ -31,11 +32,34 @@ var columnOptions = new ColumnOptions
     }
 };
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
-builder.Services.AddControllers();
+// ✅ Configure Serilog
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .WriteTo.Console()
+    .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 7)
+    .WriteTo.MSSqlServer(
+        connectionString: connectionString,
+        sinkOptions: sinkOptions,
+        columnOptions: columnOptions,
+        restrictedToMinimumLevel: LogEventLevel.Warning
+    )
+    .CreateLogger();
 
+Log.Information("Application Starting...");
+builder.Host.UseSerilog();
+builder.Host.UseNLog(); // ✅ Use both Serilog & NLog
+
+builder.Services.AddControllers();
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+{
+    options.UseSqlServer(connectionString);
+});
+
+builder.Services.AddScoped<IBookRepository, BookRepository>();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
+// ✅ Register Swagger services
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -44,46 +68,25 @@ builder.Services.AddSwaggerGen(options =>
         Version = "v1",
         Title = "Book Management API",
         Description = "An ASP.NET Core Web API for managing books.",
-
     });
 });
-
-// register the database context
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-{
-    options.UseSqlServer(connectionString);
-});
-
-// register the repository
-builder.Services.AddScoped<IBookRepository, BookRepository>();
-
-// register the exception handler
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-builder.Services.AddProblemDetails();
-
-// config Serilog
-Log.Logger = new LoggerConfiguration()
-    .WriteTo.Console()
-    .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 7) // save logs to a file
-   .WriteTo.MSSqlServer(
-        connectionString: connectionString,
-        sinkOptions: sinkOptions,
-        columnOptions: columnOptions,
-        restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Warning
-
-    )
-    .CreateLogger();
-
-builder.Host.UseSerilog(); // use Serilog for logging
-
-// config NLog
-builder.Logging.ClearProviders();
-builder.Host.UseNLog();
 
 
 var app = builder.Build();
 
-// Initialize Database (Apply migrations & seed data)
+// ✅ Ensure Swagger is used only after `AddSwaggerGen()`
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger(); // ✅ Ensures Swagger is available
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
+        options.RoutePrefix = string.Empty;
+    });
+}
+
+
+// ✅ Ensure database is created and migrations are applied
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -91,54 +94,37 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
+        context.Database.Migrate(); // ✅ Apply migrations before inserting seed data
         DbInitializer.Initialize(context);
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error initializing database: {ex.Message}");
+        Log.Error($"Error initializing database: {ex.Message}");
     }
 }
 
-// Configure the HTTP request pipeline.
+// ✅ Middleware setup in correct order
+app.UseExceptionHandler(); // ✅ Must be before controllers
+app.UseHttpsRedirection();
+
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
     app.UseSwagger();
-    app.UseSwaggerUI(options => // UseSwaggerUI is called only in Development.
+    app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
         options.RoutePrefix = string.Empty;
     });
 }
 
-app.UseHttpsRedirection();
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
-
-app.UseExceptionHandler();
-
 app.MapControllers();
 
-app.Run();
+Log.Information("Application Started Successfully!");
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+app.Lifetime.ApplicationStopping.Register(() =>
 {
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+    Log.Information("Application is shutting down...");
+    Log.CloseAndFlush();
+});
+
+app.Run();
