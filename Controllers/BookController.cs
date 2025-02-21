@@ -25,7 +25,6 @@ namespace BookManagementAPI.Controllers
         [HttpGet]
         public async Task<IActionResult> GetBooks()
         {
-
             var books = await _bookRepository.GetBooks();
             var bookDtos = books.Select(book => book.ToBookDto());
             return Ok(bookDtos);

@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BookManagementAPI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250221025652_Reset2")]
-    partial class Reset2
+    [Migration("20250221043117_Reset")]
+    partial class Reset
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
