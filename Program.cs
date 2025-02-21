@@ -76,9 +76,7 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog(); // use Serilog for logging
 
-// config NLog
-builder.Logging.ClearProviders();
-builder.Host.UseNLog();
+
 
 
 var app = builder.Build();
