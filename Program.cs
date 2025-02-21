@@ -1,4 +1,5 @@
 using BookManagementAPI.Data;
+using BookManagementAPI.Infrastructure;
 using BookManagementAPI.Interfaces;
 using BookManagementAPI.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -31,6 +32,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // register the repository
 builder.Services.AddScoped<IBookRepository, BookRepository>();
+
+// register the exception handler
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
@@ -82,6 +87,8 @@ app.MapGet("/weatherforecast", () =>
     return forecast;
 })
 .WithName("GetWeatherForecast");
+
+app.UseExceptionHandler();
 
 app.MapControllers();
 
