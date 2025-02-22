@@ -81,12 +81,6 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog(); // use Serilog for logging
 
-//add services for newtonsoft json
-builder.Services.AddControllers().AddNewtonsoftJson(options =>
-{
-    options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
-});
-
 // add services for identity
 builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
 {
