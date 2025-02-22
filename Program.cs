@@ -16,7 +16,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 var sinkOptions = new MSSqlServerSinkOptions
 {
     TableName = "Logs",
-    AutoCreateSqlTable = true, // Automatically creates the Logs table if not exists
+    AutoCreateSqlTable = false, // Automatically creates the Logs table if not exists
     BatchPostingLimit = 50, // Number of logs before batch insert
     SchemaName = "dbo"
 };
