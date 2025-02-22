@@ -1,13 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 using BookManagementAPI.Dtos.Book;
 using BookManagementAPI.Helpers;
 using BookManagementAPI.Interfaces;
 using BookManagementAPI.Mappers;
 using BookManagementAPI.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace BookManagementAPI.Controllers
 {
@@ -15,33 +18,68 @@ namespace BookManagementAPI.Controllers
     [Route("api/books")]
     public class BookController : ControllerBase
     {
-        private IBookRepository _bookRepository;
+        private readonly IBookRepository _bookRepository;
+        private readonly IMemoryCache _memoryCache;
 
-        public BookController(IBookRepository bookRepository)
+        public BookController(IBookRepository bookRepository, IMemoryCache memoryCache)
         {
             _bookRepository = bookRepository;
+            _memoryCache = memoryCache;
         }
-
 
         [HttpGet]
         public async Task<IActionResult> GetBooks([FromQuery] QueryObject queryObject)
         {
-            var books = await _bookRepository.GetBooks(queryObject);
-            var bookDtos = books.Select(book => book.ToBookDto());
-            return Ok(bookDtos);
+
+            // Generate a cache key based on the query parameters
+            var cacheKey = CacheHelper.GenerateCacheKey(queryObject);
+
+            // Try to get data from cache
+            if (_memoryCache.TryGetValue(cacheKey, out List<BookDto> bookDtos))
+            {
+                return Ok(bookDtos);
+            }
+            else
+            {
+                // If not in cache, fetch from the repository
+                var books = await _bookRepository.GetBooks(queryObject);
+                bookDtos = books.Select(book => book.ToBookDto()).ToList();
+
+                // Save data in cache with a dynamic key
+                _memoryCache.Set(cacheKey, bookDtos, new MemoryCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+                });
+
+                return Ok(bookDtos);
+            }
         }
+
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetBookById(int id)
         {
-            var book = await _bookRepository.GetBookById(id);
-            if (book == null)
+            if (_memoryCache.TryGetValue(id, out BookDto bookDto))
             {
-                return NotFound();
-
+                return Ok(bookDto);
             }
-            var bookDto = book.ToBookDto();
-            return Ok(bookDto);
+            else
+            {
+                var book = await _bookRepository.GetBookById(id);
+                if (book == null)
+                {
+                    return NotFound();
+
+                }
+                bookDto = book.ToBookDto();
+                _memoryCache.Set(id, bookDto, new MemoryCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+                });
+
+                return Ok(bookDto);
+            }
+
         }
 
         [HttpPost]
