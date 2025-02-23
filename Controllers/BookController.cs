@@ -9,6 +9,7 @@ using BookManagementAPI.Helpers;
 using BookManagementAPI.Interfaces;
 using BookManagementAPI.Mappers;
 using BookManagementAPI.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -83,6 +84,7 @@ namespace BookManagementAPI.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateBook([FromBody] CreateBookRequestDto createBookRequestDto)
         {
             if (!ModelState.IsValid)

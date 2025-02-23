@@ -57,22 +57,35 @@ namespace BookManagementAPI.Controllers
 
             if (user != null && await _userManager.CheckPasswordAsync(user, request.Password))
             {
+                var roles = await _userManager.GetRolesAsync(user); // 获取用户角色
                 var tokenHandler = new JwtSecurityTokenHandler();
                 var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
+
+                var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Name, user.UserName),
+            new Claim(ClaimTypes.NameIdentifier, user.Id)
+        };
+
+                // 添加角色到 Claims
+                foreach (var role in roles)
+                {
+                    claims.Add(new Claim(ClaimTypes.Role, role));
+                }
+
                 var tokenDescriptor = new SecurityTokenDescriptor
                 {
-                    Subject = new ClaimsIdentity(new[]
-                    {
-                    new Claim(ClaimTypes.Name, user.UserName),
-                    new Claim(ClaimTypes.NameIdentifier, user.Id)
-                }),
+                    Subject = new ClaimsIdentity(claims), // ✅ Use the full claims list including roles
                     Expires = DateTime.UtcNow.AddDays(7),
+                    Issuer = _configuration["Jwt:Issuer"], // Ensure it matches appsettings.json
+                    Audience = _configuration["Jwt:Audience"], // Ensure it matches appsettings.json
                     SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
                 };
+
                 var token = tokenHandler.CreateToken(tokenDescriptor);
                 var tokenString = tokenHandler.WriteToken(token);
 
-                return Ok(new { Token = tokenString });
+                return Ok(new { Token = tokenString, Username = user.UserName, Roles = roles });
             }
 
             return Unauthorized();
