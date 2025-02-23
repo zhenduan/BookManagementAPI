@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Identity;
 using BookManagementAPI.Models;
+using BookManagementAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -84,6 +85,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // register the repository
 builder.Services.AddScoped<IBookRepository, BookRepository>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+
 
 // register the exception handler
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();

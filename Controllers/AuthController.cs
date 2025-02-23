@@ -5,6 +5,8 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using BookManagementAPI.Dtos.Account;
+using BookManagementAPI.Interfaces;
 using BookManagementAPI.Models;
 using Microsoft.AspNetCore.Identity;
 
@@ -20,90 +22,97 @@ namespace BookManagementAPI.Controllers
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly SignInManager<AppUser> _signInManager;
-        private readonly IConfiguration _configuration;
+        private readonly ITokenService _tokenService;
 
-        public AuthController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, IConfiguration configuration)
+
+        public AuthController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, ITokenService tokenService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
-            _configuration = configuration;
+            _tokenService = tokenService;
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] UserRegisterRequest request)
+        public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
         {
-            var user = new AppUser
-            {
-                UserName = request.Username,
-                Email = request.Email,
-                // FullName = request.FullName,
-                // DateOfBirth = request.DateOfBirth
-            };
 
-            var result = await _userManager.CreateAsync(user, request.Password);
-
-            if (result.Succeeded)
+            try
             {
-                return Ok(new { Message = "User registered successfully" });
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+                var user = new AppUser
+                {
+                    UserName = registerDto.Username,
+                    Email = registerDto.Email
+                };
+
+                var result = await _userManager.CreateAsync(user, registerDto.Password);
+
+                if (!result.Succeeded)
+                {
+                    return BadRequest(result.Errors);
+                }
+                await _userManager.AddToRoleAsync(user, "User");
+
+                var roles = await _userManager.GetRolesAsync(user); // ✅ Fetch roles
+
+                return Ok(
+                    new NewUserDto
+                    {
+                        UserName = user.UserName,
+                        Email = user.Email,
+                        Token = _tokenService.CreateToken(user, roles)
+                    }
+                );
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
             }
 
-            return BadRequest(result.Errors);
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] UserLoginRequest request)
+        public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {
-            var user = await _userManager.FindByNameAsync(request.Username);
-
-            if (user != null && await _userManager.CheckPasswordAsync(user, request.Password))
+            try
             {
-                var roles = await _userManager.GetRolesAsync(user); // 获取用户角色
-                var tokenHandler = new JwtSecurityTokenHandler();
-                var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
-
-                var claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.Name, user.UserName),
-            new Claim(ClaimTypes.NameIdentifier, user.Id)
-        };
-
-                // 添加角色到 Claims
-                foreach (var role in roles)
+                if (!ModelState.IsValid)
                 {
-                    claims.Add(new Claim(ClaimTypes.Role, role));
+                    return BadRequest(ModelState);
+                }
+                var user = await _userManager.FindByNameAsync(loginDto.Username);
+
+                if (user == null)
+                {
+                    return Unauthorized();
                 }
 
-                var tokenDescriptor = new SecurityTokenDescriptor
+                var result = await _signInManager.CheckPasswordSignInAsync(user, loginDto.Password, false);
+
+                if (!result.Succeeded)
                 {
-                    Subject = new ClaimsIdentity(claims), // ✅ Use the full claims list including roles
-                    Expires = DateTime.UtcNow.AddDays(7),
-                    Issuer = _configuration["Jwt:Issuer"], // Ensure it matches appsettings.json
-                    Audience = _configuration["Jwt:Audience"], // Ensure it matches appsettings.json
-                    SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-                };
+                    return Unauthorized();
+                }
 
-                var token = tokenHandler.CreateToken(tokenDescriptor);
-                var tokenString = tokenHandler.WriteToken(token);
+                var roles = await _userManager.GetRolesAsync(user);
 
-                return Ok(new { Token = tokenString, Username = user.UserName, Roles = roles });
+                return Ok(
+                    new NewUserDto
+                    {
+                        UserName = user.UserName,
+                        Email = user.Email,
+                        Token = _tokenService.CreateToken(user, roles)
+                    }
+                );
             }
-
-            return Unauthorized();
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
         }
     }
 
-    public class UserRegisterRequest
-    {
-        public string Username { get; set; }
-        public string Email { get; set; }
-        // public string FullName { get; set; }
-        // public DateTime DateOfBirth { get; set; }
-        public string Password { get; set; }
-    }
-
-    public class UserLoginRequest
-    {
-        public string Username { get; set; }
-        public string Password { get; set; }
-    }
 }

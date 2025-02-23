@@ -14,7 +14,7 @@ namespace BookManagementAPI.Data
             var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
             var userManager = serviceProvider.GetRequiredService<UserManager<AppUser>>();
 
-            // 预设角色
+
             string[] roles = { "Admin", "User" };
 
             foreach (var role in roles)
@@ -25,7 +25,7 @@ namespace BookManagementAPI.Data
                 }
             }
 
-            // 创建默认管理员
+            // create default admin user
             string adminEmail = "admin@example.com";
             string adminPassword = "Admin@123";
 
