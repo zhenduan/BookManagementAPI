@@ -97,6 +97,7 @@ namespace BookManagementAPI.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateBook(int id, [FromBody] UpdateBookRequestDto updateBookRequestDto)
         {
             if (!ModelState.IsValid)
@@ -113,6 +114,7 @@ namespace BookManagementAPI.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteBook(int id)
         {
             var bookDelete = await _bookRepository.DeleteBook(id);
